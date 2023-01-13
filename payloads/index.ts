@@ -1,4 +1,5 @@
 import request1 from "./payload-1";
+import request2 from "./payload-2";
 
 const basePayloadType = {
   projectId: 17904,
@@ -82,5 +83,9 @@ export type DistributionRequest = Omit<typeof basePayloadType, "segment"> & {
   segment: any;
 };
 
-export type TestRequest = { name: string; payload: DistributionRequest };
-export default [request1] as TestRequest[];
+export type TestRequest = {
+  name: string;
+  payload: DistributionRequest;
+  url: string;
+};
+export default [request2, request1] as TestRequest[];

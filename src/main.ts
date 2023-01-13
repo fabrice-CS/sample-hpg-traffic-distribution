@@ -29,12 +29,13 @@ async function executeTestRequest(request: TestRequest) {
       Array.from(devicesMap.entries()).map(async ([deviceId, deviceLabel]) => {
         return getTotalCountDistributionForDevice(
           [deviceId, deviceLabel],
-          basePayload
+          basePayload,
+          request.url
         );
       })
     ),
 
-    getTotalCountDistributionForDevice(allDevices, basePayload),
+    getTotalCountDistributionForDevice(allDevices, basePayload, request.url),
   ]);
 
   const totFromSeparateDevices = separateDevicesResponse
@@ -70,7 +71,10 @@ relative Change: ${relativeChange(totFromSeparateDevices, totFromAllDevice)}`;
     ...separateDevicesResponse.map((responseObj) =>
       util.inspect(responseObj, false, null, false)
     ),
-    util.inspect(allDeviceResponse, false, null, false /* enable colors */),
+    util.inspect(allDeviceResponse, false, null, false),
+    "",
+    "payload",
+    util.inspect(request.payload, false, null, false),
   ];
 
   await writeToFile(`${request.name}-out.txt`, lines);
