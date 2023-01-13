@@ -1,4 +1,10 @@
 import got from "got";
+import { performance } from "perf_hooks";
+import util from "node:util";
+
+import requests, { DistributionRequest, TestRequest } from "../payloads";
+import { mkdir, writeFile } from "fs/promises";
+import { resolve } from "path";
 
 const devicesMap = new Map<number, string>([
   [1, "Desktop"],
@@ -8,242 +14,103 @@ const devicesMap = new Map<number, string>([
 
 const allDevices: [number, string] = [-1, "All"];
 
-const basePayloadType = {
-  projectId: 17904,
-  from: "2022-11-09T00:00:00Z",
-  to: "2022-12-08T23:59:59Z",
-  deviceId: 3,
-  segment: {
-    nodeType: "SEQ",
-    children: [
-      {
-        field: "goal",
-        value: {
-          action: "pageview",
-          page: {
-            nodeType: "AND",
-            children: [
-              {
-                field: "page:host",
-                operator: "equals",
-                value: "www.johnlewis.com",
-                nodeType: "filter",
-              },
-              {
-                field: "page:path",
-                operator: "equals",
-                value: "/browse/women/womens-dresses/_/N-flw",
-                nodeType: "filter",
-              },
-            ],
-          },
-        },
-        nodeType: "filter",
-        operator: "equals",
-      },
-      {
-        field: "goal",
-        value: {
-          action: "click",
-          page: {
-            nodeType: "AND",
-            children: [
-              {
-                field: "page:host",
-                operator: "equals",
-                value: "www.johnlewis.com",
-                nodeType: "filter",
-              },
-              {
-                field: "page:path",
-                operator: "equals",
-                value: "/browse/women/womens-dresses/_/N-flw",
-                nodeType: "filter",
-              },
-            ],
-          },
-          targets: [
-            "div#content>div:eq(0)>nav:eq(0)>details:eq(1)",
-            "h3#accordion-summary-occasion",
-            "span#day",
-            "span#summer",
-            "span#evening",
-            "span#party",
-            "span#wedding-guest",
-            "span#work",
-            "span#race-day",
-            "span#winter",
-            "span#prom",
-            "span#bridesmaid",
-            "span#bridal",
-          ],
-        },
-        nodeType: "filter",
-        operator: "equals",
-      },
-    ],
-  },
-  dimension: "os",
-};
+async function writeToFile(filename: string, lines: string[]) {
+  const dir = resolve(__dirname, "../out");
+  await mkdir(resolve(dir), { recursive: true });
+  await writeFile(resolve(dir, filename), lines.join("\n"));
+}
 
-type Request = Omit<typeof basePayloadType, "segment"> & { segment: any };
+async function executeTestRequest(request: TestRequest) {
+  console.log("begin", request.name);
+  const basePayload: DistributionRequest = request.payload;
+
+  const [separateDevicesResponse, allDeviceResponse] = await Promise.all([
+    Promise.all(
+      Array.from(devicesMap.entries()).map(async ([deviceId, deviceLabel]) => {
+        return getTotalCountDistributionForDevice(
+          [deviceId, deviceLabel],
+          basePayload
+        );
+      })
+    ),
+
+    getTotalCountDistributionForDevice(allDevices, basePayload),
+  ]);
+
+  const totFromSeparateDevices = separateDevicesResponse
+    .map((r) => r.totalForDevice)
+    .reduce((acc, val) => acc + val);
+
+  const totFromAllDevice = allDeviceResponse.totalForDevice;
+
+  separateDevicesResponse.forEach((responseObj) => {
+    console.log(
+      util.inspect(responseObj, false, null, true /* enable colors */)
+    );
+  });
+
+  console.log(
+    util.inspect(allDeviceResponse, false, null, true /* enable colors */)
+  );
+  console.log({
+    totFromSeparateDevices,
+    totFromAllDevice,
+    relativeChange: relativeChange(totFromSeparateDevices, totFromAllDevice),
+  });
+
+  const results = `total from separate devices: ${totFromSeparateDevices},
+total from all device: ${totFromAllDevice},
+relative Change: ${relativeChange(totFromSeparateDevices, totFromAllDevice)}`;
+
+  const lines = [
+    request.name,
+    "",
+    results,
+    "",
+    ...separateDevicesResponse.map((responseObj) =>
+      util.inspect(responseObj, false, null, false)
+    ),
+    util.inspect(allDeviceResponse, false, null, false /* enable colors */),
+  ];
+
+  await writeToFile(`${request.name}-out.txt`, lines);
+
+  console.log("end", request.name, "\n\n");
+}
 
 async function main() {
-  const basePayload: Request = {
-    projectId: 17904,
-    from: "2022-11-09T00:00:00Z",
-    to: "2022-12-08T23:59:59Z",
-    deviceId: 3,
-    segment: {
-      nodeType: "SEQ",
-      children: [
-        {
-          field: "goal",
-          value: {
-            action: "pageview",
-            page: {
-              nodeType: "AND",
-              children: [
-                {
-                  field: "page:host",
-                  operator: "equals",
-                  value: "www.johnlewis.com",
-                  nodeType: "filter",
-                },
-                {
-                  field: "page:path",
-                  operator: "equals",
-                  value: "/browse/women/womens-dresses/_/N-flw",
-                  nodeType: "filter",
-                },
-              ],
-            },
-          },
-          nodeType: "filter",
-          operator: "equals",
-        },
-        {
-          field: "goal",
-          value: {
-            action: "click",
-            page: {
-              nodeType: "AND",
-              children: [
-                {
-                  field: "page:host",
-                  operator: "equals",
-                  value: "www.johnlewis.com",
-                  nodeType: "filter",
-                },
-                {
-                  field: "page:path",
-                  operator: "equals",
-                  value: "/browse/women/womens-dresses/_/N-flw",
-                  nodeType: "filter",
-                },
-              ],
-            },
-            targets: [
-              "div#content>div:eq(0)>nav:eq(0)>details:eq(1)",
-              "h3#accordion-summary-occasion",
-              "span#day",
-              "span#summer",
-              "span#evening",
-              "span#party",
-              "span#wedding-guest",
-              "span#work",
-              "span#race-day",
-              "span#winter",
-              "span#prom",
-              "span#bridesmaid",
-              "span#bridal",
-            ],
-          },
-          nodeType: "filter",
-          operator: "equals",
-        },
-      ],
-    },
-    dimension: "os",
-  };
+  for (let request of requests) {
+    await executeTestRequest(request);
+  }
+}
 
-  const basePayload2: Request = {
-    segment: {},
-    from: "",
-    to: "",
-    projectId: 0,
-    deviceId: 1,
-    dimension: "os",
-  };
-
-  const deviceTotals = await Promise.all(
-    Array.from(devicesMap.entries()).map(async ([deviceId, deviceLabel]) => {
-      const payload: Request = { ...basePayload, deviceId: deviceId } as const;
-
-      const d = await getResponse<HPGResponse>(
-        "http://hpgm-dashboard-production.northeurope.csq.io/dashboard/v2/distribution",
-        payload
-      );
-
-      console.log(deviceLabel, d);
-
-      const distributions = Object.entries(d).filter(
-        ([key, value]) => key !== "total"
-      );
-
-      distributions.forEach(([_, value]) => console.log(value));
-
-      const totalForDevice = distributions.reduce((acc, distribution) => {
-        return acc + distribution[1][0].value;
-      }, 0);
-
-      return totalForDevice;
-    })
-  );
-
-  const totalFromIndividualDevice = deviceTotals.reduce(
-    (acc, val) => acc + val
-  );
-
-  const allDevicesPayload = {
+async function getTotalCountDistributionForDevice(
+  [deviceId, deviceLabel]: [number, string],
+  basePayload: DistributionRequest,
+  url: string = "http://hpgm-dashboard-production.northeurope.csq.io/dashboard/v2/distribution"
+) {
+  const payload: DistributionRequest = {
     ...basePayload,
-    deviceId: allDevices[0],
+    deviceId: deviceId,
   } as const;
 
-  const d2 = await getResponse<HPGResponse>(
-    "http://hpgm-dashboard-production.northeurope.csq.io/dashboard/v2/distribution",
-    allDevicesPayload
+  console.log("search for label", deviceLabel);
+  const t0 = performance.now();
+  const response = await getResponse<HPGResponse>(url, payload);
+  const duration = performance.now() - t0;
+  console.log("found for label", deviceLabel, "in", duration * 1e-3, "s");
+  const responseObj = { [deviceLabel]: response };
+
+  const distributions = Object.entries(response).filter(
+    ([key, _]) => key !== "total"
   );
 
-  console.log(allDevices[1], d2);
+  const totalForDevice = distributions.reduce(
+    (acc, distribution) => acc + distribution[1][0].value,
+    0
+  );
 
-  const distributions = Object.entries(d2).filter(([key, value]) => {
-    return key !== "total";
-  });
-
-  distributions.forEach(([_, value]) => console.log(value));
-
-  const totalForAllDevice = distributions.reduce((acc, distribution) => {
-    return acc + distribution[1][0].value;
-  }, 0);
-
-  console.log({ totalFromIndividualDevice });
-
-  console.log({ totalForAllDevice });
-
-  console.log({
-    relativeChange: relativeChange(
-      totalFromIndividualDevice,
-      totalForAllDevice
-    ),
-  });
-  //   console.log(d2);
-
-  //   Object.entries(d2)
-  //     .filter(([key, value]) => {
-  //       return key !== "total";
-  //     })
-  //     .forEach(([_, value]) => console.log(value));
+  return { totalForDevice, responseObj, duration };
 }
 
 function relativeChange(actual: number, reference: number) {
@@ -263,96 +130,5 @@ type HPGResponse = Record<
   string,
   [{ name: string; value: number; percent: number }]
 >;
-
-const requestPayload = {
-  projectId: 17904,
-  from: "2022-11-09T00:00:00Z",
-  to: "2022-12-08T23:59:59Z",
-  deviceId: 3,
-  segment: {
-    nodeType: "SEQ",
-    children: [
-      {
-        field: "goal",
-        value: {
-          action: "pageview",
-          page: {
-            nodeType: "AND",
-            children: [
-              {
-                field: "page:host",
-                operator: "equals",
-                value: "www.johnlewis.com",
-                nodeType: "filter",
-              },
-              {
-                field: "page:path",
-                operator: "equals",
-                value: "/browse/women/womens-dresses/_/N-flw",
-                nodeType: "filter",
-              },
-            ],
-          },
-        },
-        nodeType: "filter",
-        operator: "equals",
-      },
-      {
-        field: "goal",
-        value: {
-          action: "click",
-          page: {
-            nodeType: "AND",
-            children: [
-              {
-                field: "page:host",
-                operator: "equals",
-                value: "www.johnlewis.com",
-                nodeType: "filter",
-              },
-              {
-                field: "page:path",
-                operator: "equals",
-                value: "/browse/women/womens-dresses/_/N-flw",
-                nodeType: "filter",
-              },
-            ],
-          },
-          targets: [
-            "div#content>div:eq(0)>nav:eq(0)>details:eq(1)",
-            "h3#accordion-summary-occasion",
-            "span#day",
-            "span#summer",
-            "span#evening",
-            "span#party",
-            "span#wedding-guest",
-            "span#work",
-            "span#race-day",
-            "span#winter",
-            "span#prom",
-            "span#bridesmaid",
-            "span#bridal",
-          ],
-        },
-        nodeType: "filter",
-        operator: "equals",
-      },
-    ],
-  },
-  dimension: "os",
-};
-/* 
-
-
-
-
-
-curl -X POST --location "http://hpgm-dashboard-production.northeurope.csq.io/dashboard/v2/distribution" \
-    -H "Content-Type: application/json" \
-    -d "{\"projectId\":17904,\"from\":\"2022-11-09T00:00:00Z\",\"to\":\"2022-12-08T23:59:59Z\",\"deviceId\":3,\"segment\":{\"nodeType\":\"SEQ\",\"children\":[{\"field\":\"goal\",\"value\":{\"action\":\"pageview\",\"page\":{\"nodeType\":\"AND\",\"children\":[{\"field\":\"page:host\",\"operator\":\"equals\",\"value\":\"www.johnlewis.com\",\"nodeType\":\"filter\"},{\"field\":\"page:path\",\"operator\":\"equals\",\"value\":\"/browse/women/womens-dresses/_/N-flw\",\"nodeType\":\"filter\"}]}},\"nodeType\":\"filter\",\"operator\":\"equals\"},{\"field\":\"goal\",\"value\":{\"action\":\"click\",\"page\":{\"nodeType\":\"AND\",\"children\":[{\"field\":\"page:host\",\"operator\":\"equals\",\"value\":\"www.johnlewis.com\",\"nodeType\":\"filter\"},{\"field\":\"page:path\",\"operator\":\"equals\",\"value\":\"/browse/women/womens-dresses/_/N-flw\",\"nodeType\":\"filter\"}]},\"targets\":[\"div#content>div:eq(0)>nav:eq(0)>details:eq(1)\",\"h3#accordion-summary-occasion\",\"span#day\",\"span#summer\",\"span#evening\",\"span#party\",\"span#wedding-guest\",\"span#work\",\"span#race-day\",\"span#winter\",\"span#prom\",\"span#bridesmaid\",\"span#bridal\"]},\"nodeType\":\"filter\",\"operator\":\"equals\"}]},\"dimension\":\"os\"}"
-
-    for     
-
-*/
 
 main();
