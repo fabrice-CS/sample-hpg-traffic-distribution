@@ -1,10 +1,11 @@
 export default {
-  url: "http://hpgm-dashboard-production.northeurope.csq.io/dashboard/v2/distribution",
-  name: "Request 1 - John Lewis ",
+  url: "https://hpgm-dashboard-production.northeurope.csq.io/dashboard/v2/distribution",
+  name: "Request 5 - John Lewis - problematic segment 1",
+
   payload: {
     projectId: 17904,
-    from: "2022-11-09T00:00:00Z",
-    to: "2022-12-08T23:59:59Z",
+    from: "2022-11-08T11:00:00Z",
+    to: "2022-12-09T10:59:59Z",
     deviceId: 3,
     segment: {
       nodeType: "SEQ",

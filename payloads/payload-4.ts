@@ -1,24 +1,25 @@
 export default {
-  url: "https://hpgm-dashboard-production.eu-west-1.csq.io/dashboard/v2/distribution",
-  name: "Request 2 - Goldcar",
+  url: "https://hpgm-dashboard-production.us-east-1.csq.io/dashboard/v2/distribution",
+  name: "Request 4 - QVC - 2 segments",
+
   payload: {
-    projectId: 5207,
-    from: "2022-10-31T23:00:00Z",
-    to: "2022-11-30T22:59:59Z",
-    deviceId: -1,
+    projectId: 2122,
+    from: "2022-12-17T11:00:00Z",
+    to: "2023-01-16T10:15:31Z",
+    deviceId: 1,
     segment: {
-      nodeType: "SEQ",
+      nodeType: "OR",
       children: [
         {
           field: "goal",
           value: {
-            action: "pageview",
+            action: "landingPage",
             page: {
+              field: "page:query",
+              operator: "contains",
+              value: "mmc=GOOGLESHOWCASE",
               displayValue: "",
-              field: "page:customVarValue6",
               nodeType: "filter",
-              operator: "equals",
-              value: "goldcar_additional_products",
             },
           },
           nodeType: "filter",
@@ -27,13 +28,13 @@ export default {
         {
           field: "goal",
           value: {
-            action: "pageview",
+            action: "landingPage",
             page: {
               displayValue: "",
-              field: "page:customVarValue6",
+              field: "page:customVarValue3",
               nodeType: "filter",
               operator: "equals",
-              value: "goldcar_confirmation_page",
+              value: "myaccount-order-status",
             },
           },
           nodeType: "filter",

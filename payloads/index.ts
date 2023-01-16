@@ -1,5 +1,9 @@
 import request1 from "./payload-1";
 import request2 from "./payload-2";
+import request3 from "./payload-3";
+import request4 from "./payload-4";
+import request5 from "./payload-5";
+import request6 from "./payload-6";
 
 const basePayloadType = {
   projectId: 17904,
@@ -88,4 +92,11 @@ export type TestRequest = {
   payload: DistributionRequest;
   url: string;
 };
-export default [request2, request1] as TestRequest[];
+export default [
+  request1,
+  request2,
+  request3,
+  request4,
+  request5,
+  request6,
+] as TestRequest[];
