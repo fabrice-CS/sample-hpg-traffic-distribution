@@ -4,6 +4,7 @@ import request3 from "./payload-3";
 import request4 from "./payload-4";
 import request5 from "./payload-5";
 import request6 from "./payload-6";
+import request7 from "./payload-7";
 
 const basePayloadType = {
   projectId: 17904,
@@ -99,4 +100,5 @@ export default [
   request4,
   request5,
   request6,
+  request7,
 ] as TestRequest[];

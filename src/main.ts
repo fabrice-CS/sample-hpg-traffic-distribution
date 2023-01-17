@@ -73,6 +73,8 @@ relative Change: ${relativeChange(totFromSeparateDevices, totFromAllDevice)}`;
     ),
     util.inspect(allDeviceResponse, false, null, false),
     "",
+    `url: ${request.url}`,
+    "",
     "payload",
     util.inspect(request.payload, false, null, false),
   ];
